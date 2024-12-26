@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            <h2>上传价格数据</h2>
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="mb-4">
+                <div class="mb-3">
+                    <label for="file" class="form-label">选择Excel文件</label>
+                    <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls">
+                </div>
+                <button type="submit" class="btn btn-primary">上传</button>
+            </form>
+            
+            <form action="{{ url_for('clear_data') }}" method="post" class="mb-4" 
+                  onsubmit="return confirm('确定要清空所有价格数据吗？此操作不可恢复。');">
+                <button type="submit" class="btn btn-danger">清空所有数据</button>
+            </form>
+        </div>
+
+        <div class="col-md-6">
+            <h2>价格比较</h2>
+            <form action="{{ url_for('compare_prices') }}" method="get" class="mb-4">
+                <div class="mb-3">
+                    <label for="start_date" class="form-label">起始日期</label>
+                    <select class="form-select" id="start_date" name="start_date" required>
+                        <option value="">请选择日期...</option>
+                        {% for date in dates %}
+                            <option value="{{ date }}">{{ date }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="end_date" class="form-label">结束日期</label>
+                    <select class="form-select" id="end_date" name="end_date">
+                        <option value="">选择结束日期（默认为最新）</option>
+                        {% for date in dates %}
+                            <option value="{{ date }}">{{ date }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">比较价格</button>
+            </form>
+        </div>
+    </div>
+
+    {% if price_alerts %}
+        <div class="alert alert-warning">
+            <h4>价格波动提醒</h4>
+            <ul>
+                {% for alert in price_alerts %}
+                    <li>
+                        【{{ alert['品种'] }}】{{ alert['供应商'] }}价格从 {{ alert['原价'] }} 
+                        变化到 {{ alert['新价'] }}，波动 {{ alert['变化比例'] }}
+                        ({{ alert['变化日期'] }})
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if latest_prices is not none %}
+        <h2>最新价格列表</h2>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>品种</th>
+                        <th>单位</th>
+                        <th>菜篮子价</th>
+                        <th>康瑞达价</th>
+                        <th>日期</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for _, row in latest_prices.iterrows() %}
+                        <tr>
+                            <td>{{ row['品种'] }}</td>
+                            <td>{{ row['单位'] }}</td>
+                            <td>{{ row['菜篮子价'] }}</td>
+                            <td>{{ row['康瑞达价'] }}</td>
+                            <td>{{ row['日期'] }}</td>
+                            <td>
+                                <a href="{{ url_for('price_trend', food_item=row['品种']) }}" 
+                                   class="btn btn-sm btn-info">查看趋势</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mb-4">
+            <a href="{{ url_for('order_calculator') }}" class="btn btn-primary">
+                <i class="bi bi-cart-plus"></i> 开始下单
+            </a>
+        </div>
+    {% endif %}
+{% endblock %} 

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>下单计算</h2>
+    {% if last_order %}
+    <div class="mb-3">
+        <button type="button" class="btn btn-info" onclick="loadLastOrder()">加载上次订单</button>
+    </div>
+    {% endif %}
+    
+    <form method="post" class="mb-4" id="orderForm">
+        <div class="table-responsive">
+            <table class="table table-striped" id="orderTable">
+                <thead>
+                    <tr>
+                        <th style="width: 40%">品种</th>
+                        <th>单位</th>
+                        <th>单价(康瑞达)</th>
+                        <th>数量</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="newItemRow">
+                        <td>
+                            <select class="form-select form-select-sm select2" id="newItem">
+                                <option value="">搜索商品...</option>
+                                {% for _, row in items.iterrows() %}
+                                <option value="{{ row['品种'] }}" 
+                                        data-unit="{{ row['单位'] }}"
+                                        data-price="{{ row['康瑞达价'] }}">
+                                    {{ row['品种'] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td id="selectedUnit"></td>
+                        <td id="selectedPrice"></td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm" 
+                                   id="newQuantity" step="0.1" min="0" value="0">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-success" onclick="addItem()">
+                                添加
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <button type="submit" class="btn btn-primary">计算总价</button>
+    </form>
+
+    {% if order_items %}
+    <div class="mt-4">
+        <h3>订单明细</h3>
+        <div class="mb-3">
+            <a href="{{ url_for('export_order') }}" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel"></i> 导出Excel
+            </a>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>品种</th>
+                    <th>数量</th>
+                    <th>单位</th>
+                    <th>单价</th>
+                    <th>小计</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order_items %}
+                <tr>
+                    <td>{{ item['品种'] }}</td>
+                    <td>{{ item['数量'] }}</td>
+                    <td>{{ item['单位'] }}</td>
+                    <td>{{ item['单价'] }}</td>
+                    <td>{{ item['小计'] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if total is defined %}
+            <tfoot>
+                <tr>
+                    <td colspan="4" class="text-end"><strong>总计：</strong></td>
+                    <td><strong>{{ total }}</strong></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 确保 jQuery 已加载
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery is not loaded');
+        return;
+    }
+
+    // 确保 Select2 已加载
+    if (typeof jQuery.fn.select2 === 'undefined') {
+        console.error('Select2 is not loaded');
+        return;
+    }
+
+    // 初始化 Select2
+    jQuery('#newItem').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: '输入商品名称搜索...',
+        allowClear: true,
+        language: 'zh-CN',
+        dropdownParent: jQuery('#orderForm'),
+        minimumInputLength: 1,
+        matcher: function(params, data) {
+            if (!params.term) {
+                return data;
+            }
+            
+            const term = params.term.toLowerCase();
+            const text = data.text.toLowerCase();
+            
+            if (text.indexOf(term) > -1) {
+                return data;
+            }
+            
+            return null;
+        }
+    }).on('select2:open', function() {
+        setTimeout(function() {
+            jQuery('.select2-search__field').focus();
+        }, 0);
+    });
+
+    // 当选择改变时更新单位和价格
+    jQuery('#newItem').on('change', function() {
+        const option = jQuery(this).find('option:selected');
+        jQuery('#selectedUnit').text(option.data('unit') || '');
+        jQuery('#selectedPrice').text(option.data('price') || '');
+    });
+});
+
+// 修改 addItem 函数使用 jQuery
+function addItem() {
+    const select = document.getElementById('newItem');
+    const quantity = document.getElementById('newQuantity');
+    
+    if (select.value && quantity.value > 0) {
+        const option = select.options[select.selectedIndex];
+        const unit = option.dataset.unit;
+        const price = option.dataset.price;
+        
+        const tbody = document.getElementById('orderTable').getElementsByTagName('tbody')[0];
+        const newRow = tbody.insertRow(tbody.rows.length - 1);
+        
+        newRow.innerHTML = `
+            <td>${select.value}
+                <input type="hidden" name="quantity_${select.value}" value="${quantity.value}">
+            </td>
+            <td>${unit}</td>
+            <td>${price}</td>
+            <td>${quantity.value}</td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger" onclick="this.parentNode.parentNode.remove()">
+                    删除
+                </button>
+            </td>
+        `;
+        
+        // 清空选择和数量
+        jQuery('#newItem').val(null).trigger('change');
+        quantity.value = 0;
+        jQuery('#selectedUnit').text('');
+        jQuery('#selectedPrice').text('');
+    }
+}
+
+// 修改 loadLastOrder 函数使用 jQuery
+function loadLastOrder() {
+    const lastOrder = JSON.parse('{{ last_order|tojson|safe }}');
+    lastOrder.forEach(function(item) {
+        jQuery('#newItem').val(item.品种).trigger('change');
+        jQuery('#newQuantity').val(item.数量);
+        addItem();
+    });
+}
+</script>
+{% endblock %} 

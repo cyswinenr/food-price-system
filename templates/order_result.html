@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>订单明细</h2>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>品种</th>
+                    <th>单位</th>
+                    <th>数量</th>
+                    <th>单价</th>
+                    <th>小计</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order_items %}
+                <tr>
+                    <td>{{ item['品种'] }}</td>
+                    <td>{{ item['单位'] }}</td>
+                    <td>{{ "%.1f"|format(item['数量']) }}</td>
+                    <td>{{ "%.2f"|format(item['单价']) }}</td>
+                    <td>{{ "%.2f"|format(item['小计']) }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="table-info">
+                    <td colspan="4" class="text-end"><strong>总计：</strong></td>
+                    <td><strong>{{ "%.2f"|format(total_price) }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-3">
+        <a href="{{ url_for('order_calculator') }}" class="btn btn-primary">继续下单</a>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">返回首页</a>
+    </div>
+</div>
+{% endblock %} 

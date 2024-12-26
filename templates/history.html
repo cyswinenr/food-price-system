@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>{{ food_item }} 价格历史</h2>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>单位</th>
+                    <th>菜篮子价</th>
+                    <th>康瑞达价</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for _, row in history.iterrows() %}
+                    <tr>
+                        <td>{{ row['日期'] }}</td>
+                        <td>{{ row['单位'] }}</td>
+                        <td>{{ row['菜篮子价'] }}</td>
+                        <td>{{ row['康瑞达价'] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">返回首页</a>
+{% endblock %} 

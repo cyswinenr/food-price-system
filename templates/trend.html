@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>{{ data['品种'] }} 价格趋势分析</h2>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">菜篮子价格统计</div>
+                <div class="card-body">
+                    <p>最高价：{{ data['最高菜篮子价'] }} 元/{{ data['单位'] }}</p>
+                    <p>最低价：{{ data['最低菜篮子价'] }} 元/{{ data['单位'] }}</p>
+                    <p>平均价：{{ data['平均菜篮子价'] }} 元/{{ data['单位'] }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">康瑞达价格统计</div>
+                <div class="card-body">
+                    <p>最高价：{{ data['最高康瑞达价'] }} 元/{{ data['单位'] }}</p>
+                    <p>最低价：{{ data['最低康瑞达价'] }} 元/{{ data['单位'] }}</p>
+                    <p>平均价：{{ data['平均康瑞达价'] }} 元/{{ data['单位'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>菜篮子价 (元/{{ data['单位'] }})</th>
+                    <th>康瑞达价 (元/{{ data['单位'] }})</th>
+                    <th>价差</th>
+                    <th>上传时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in data['历史记录'] %}
+                    <tr>
+                        <td>{{ record['日期'] }}</td>
+                        <td>{{ record['菜篮子价'] }}</td>
+                        <td>{{ record['康瑞达价'] }}</td>
+                        <td>{{ "%.2f"|format(record['菜篮子价'] - record['康瑞达价']) }}</td>
+                        <td>{{ record['上传时间'] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">返回首页</a>
+    </div>
+{% endblock %} 

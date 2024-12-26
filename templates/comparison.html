@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>价格比较 ({{ start_date }} 至 {{ end_date }})</h2>
+    
+    {% if comparison %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>品种</th>
+                        <th>单位</th>
+                        <th>菜篮子价(起)</th>
+                        <th>菜篮子价(终)</th>
+                        <th>菜篮子价变化</th>
+                        <th>康瑞达价(起)</th>
+                        <th>康瑞达价(终)</th>
+                        <th>康瑞达价变化</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in comparison %}
+                        <tr>
+                            <td>{{ item['品种'] }}</td>
+                            <td>{{ item['单位'] }}</td>
+                            <td>{{ item['菜篮子价_起'] }}</td>
+                            <td>{{ item['菜篮子价_终'] }}</td>
+                            <td>{{ item['菜篮子价_变化'] }}</td>
+                            <td>{{ item['康瑞达价_起'] }}</td>
+                            <td>{{ item['康瑞达价_终'] }}</td>
+                            <td>{{ item['康瑞达价_变化'] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            没有找到可比较的数据
+        </div>
+    {% endif %}
+    
+    <a href="{{ url_for('index') }}" class="btn btn-primary">返回首页</a>
+{% endblock %} 
