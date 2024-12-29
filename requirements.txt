@@ -1,5 +1,7 @@
-flask
-pandas
-xlsxwriter
-waitress
-werkzeug 
+Flask==3.0.2
+Werkzeug==3.0.1
+SQLAlchemy==2.0.28
+python-dotenv==1.0.1
+pandas==2.2.1
+XlsxWriter==3.2.0
+waitress==3.0.0 

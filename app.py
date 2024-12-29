@@ -140,19 +140,28 @@ def order_calculator():
                 food_name = key.replace('quantity_', '')
                 try:
                     quantity = float(value)
-                    price_series = items.loc[items['品种'] == food_name, '康瑞达价']
-                    if price_series.empty:
-                        flash(f'未找到商品 {food_name} 的价格信息')
-                        continue
+                    # 检查是否是自定义价格
+                    custom_price_key = f'custom_price_{food_name}'
+                    if custom_price_key in request.form:
+                        price = float(request.form[custom_price_key])
+                        # 从表单中获取自定义单位
+                        custom_unit_key = f'custom_unit_{food_name}'
+                        unit = request.form.get(custom_unit_key, '未知')
+                    else:
+                        price_series = items.loc[items['品种'] == food_name, '康瑞达价']
+                        if price_series.empty:
+                            flash(f'未找到商品 {food_name} 的价格信息')
+                            continue
+                        price = float(price_series.iloc[0])
+                        unit = items.loc[items['品种'] == food_name, '单位'].iloc[0]
                     
-                    price = float(price_series.iloc[0])
                     subtotal = quantity * price
                     total += subtotal
                     
                     order_items.append({
                         '品种': food_name,
                         '数量': quantity,
-                        '单位': items.loc[items['品种'] == food_name, '单位'].iloc[0],
+                        '单位': unit,
                         '单价': price,
                         '小计': subtotal
                     })
@@ -180,6 +189,10 @@ def order_calculator():
 def export_order():
     # 从 session 获取订单数据
     order_items = session.get('last_order', [])
+    # 获取价格日期
+    latest_prices = tracker.get_latest_prices()
+    price_date = latest_prices.iloc[0]['日期'] if not latest_prices.empty else '未知'
+    
     if not order_items:
         flash('没有可导出的订单数据')
         return redirect(url_for('order_calculator'))
@@ -188,6 +201,11 @@ def export_order():
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output)
     worksheet = workbook.add_worksheet('订单明细')
+    
+    # 添加日期信息
+    date_format = workbook.add_format({'bold': True, 'align': 'left'})
+    worksheet.write(0, 0, f'价格日期：{price_date}', date_format)
+    worksheet.write(1, 0, '')  # 空行
     
     # 添加标题样式
     header_format = workbook.add_format({
@@ -200,15 +218,15 @@ def export_order():
     # 写入表头
     headers = ['品种', '数量', '单位', '单价', '小计']
     for col, header in enumerate(headers):
-        worksheet.write(0, col, header, header_format)
+        worksheet.write(2, col, header, header_format)
     
     # 写入数据
     for row, item in enumerate(order_items, start=1):
-        worksheet.write(row, 0, item['品种'])
-        worksheet.write(row, 1, item['数量'])
-        worksheet.write(row, 2, item['单位'])
-        worksheet.write(row, 3, item['单价'])
-        worksheet.write(row, 4, item['小计'])
+        worksheet.write(row + 2, 0, item['品种'])
+        worksheet.write(row + 2, 1, item['数量'])
+        worksheet.write(row + 2, 2, item['单位'])
+        worksheet.write(row + 2, 3, item['单价'])
+        worksheet.write(row + 2, 4, item['小计'])
     
     # 计算总计
     total = sum(item['小计'] for item in order_items)
@@ -245,6 +263,66 @@ def export_order():
         as_attachment=True,
         download_name=filename
     )
+
+@app.route('/presets', methods=['GET', 'POST'])
+def manage_presets():
+    """管理常用套餐/组合"""
+    if request.method == 'POST':
+        name = request.form.get('name')
+        items = request.form.getlist('items[]')
+        quantities = request.form.getlist('quantities[]')
+        # 保存套餐信息到数据库
+
+@app.route('/inventory')
+def inventory():
+    """库存管理"""
+    # 显示当前库存
+    # 设置库存预警
+    # 自动生成采购建议
+
+@app.route('/cost_analysis')
+def cost_analysis():
+    """成本分析"""
+    # 计算平均采购成本
+    # 显示价格趋势图
+    # 提供成本优化建议
+
+@app.route('/suppliers')
+def manage_suppliers():
+    """供应商管理"""
+    # 记录多个供应商的价格
+    # 供应商评价和备注
+    # 联系方式管理
+
+@app.route('/order_history')
+def order_history():
+    """订单历史"""
+    # 查看历史订单
+    # 分析采购规律
+    # 导出报表
+
+def check_price_alerts():
+    """检查价格波动"""
+    # 设置价格波动阈值
+    # 发送通知（短信/邮件）
+
+def suggest_purchase_cycle():
+    """采购建议"""
+    # 分析历史数据
+    # 建议最佳采购时间和数量
+
+@app.route('/reports')
+def generate_reports():
+    """生成报表"""
+    # 月度采购报表
+    # 成本分析报表
+    # 价格趋势报表
+
+def analyze_data():
+    """数据分析"""
+    # 季节性价格变化
+    # 采购量与价格关系
+    # 支出预测
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True) 

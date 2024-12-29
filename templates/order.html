@@ -3,11 +3,24 @@
 {% block content %}
 <div class="container">
     <h2>下单计算</h2>
+    <div class="mb-3">
+        <button type="button" class="btn btn-primary" id="startVoice">
+            <i class="fas fa-microphone"></i> 语音输入
+        </button>
+        <span id="voiceStatus" class="ms-2"></span>
+    </div>
+    
     {% if last_order %}
     <div class="mb-3">
         <button type="button" class="btn btn-info" onclick="loadLastOrder()">加载上次订单</button>
     </div>
     {% endif %}
+    
+    <div class="mb-3">
+        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addCustomItemModal">
+            <i class="fas fa-plus"></i> 手动添加商品
+        </button>
+    </div>
     
     <form method="post" class="mb-4" id="orderForm">
         <div class="table-responsive">
@@ -16,7 +29,7 @@
                     <tr>
                         <th style="width: 40%">品种</th>
                         <th>单位</th>
-                        <th>单价(康瑞达)</th>
+                        <th>单价(康瑞达) <br><small class="text-muted">{{ items.iloc[0]['日期'] if not items.empty }}</small></th>
                         <th>数量</th>
                         <th>操作</th>
                     </tr>
@@ -38,10 +51,23 @@
                         <td id="selectedUnit"></td>
                         <td id="selectedPrice"></td>
                         <td>
-                            <input type="number" class="form-control form-control-sm" 
-                                   id="newQuantity" step="0.1" min="0" value="0">
+                            <input type="number" 
+                                   class="form-control form-control-sm" 
+                                   id="newQuantity" 
+                                   step="0.1" 
+                                   min="0" 
+                                   value="0"
+                                   pattern="[0-9]*"
+                                   inputmode="decimal">
+                            <div class="btn-group mt-1">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="adjustQuantity(-1)">-</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="adjustQuantity(1)">+</button>
+                            </div>
                         </td>
                         <td>
+                            <button type="button" class="btn btn-sm btn-primary me-1" onclick="showVoiceInput()">
+                                <i class="fas fa-microphone"></i>
+                            </button>
                             <button type="button" class="btn btn-sm btn-success" onclick="addItem()">
                                 添加
                             </button>
@@ -55,7 +81,7 @@
 
     {% if order_items %}
     <div class="mt-4">
-        <h3>订单明细</h3>
+        <h3>订单明细 <small class="text-muted">(价格日期: {{ items.iloc[0]['日期'] if not items.empty }})</small></h3>
         <div class="mb-3">
             <a href="{{ url_for('export_order') }}" class="btn btn-success">
                 <i class="bi bi-file-earmark-excel"></i> 导出Excel
@@ -93,9 +119,149 @@
         </table>
     </div>
     {% endif %}
+
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <h5>使用提示：</h5>
+        <ul>
+            <li>可以直接点击/触摸输入框进行输入</li>
+            <li>使用下拉框快速搜索商品</li>
+            <li>点击数量输入框，使用键盘上的麦克风图标进行语音输入</li>
+            <li>直接说出数字，例如："二十"或"20"</li>
+            <li>支持触摸屏和键盘/鼠标操作</li>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h5>iPad设置说明：</h5>
+        <ol>
+            <li>打开 设置 > 通用 > 键盘</li>
+            <li>确保"听写"功能已开启</li>
+            <li>如果没有看到听写选项，请检查：
+                <ul>
+                    <li>设置 > Siri与搜索 > 启用Siri</li>
+                    <li>设置 > 隐私与安全性 > 麦克风 > 允许浏览器使用</li>
+                </ul>
+            </li>
+        </ol>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="mb-3">
+        <h5>常用套餐</h5>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="loadPreset('早餐套餐')">早餐</button>
+            <button class="btn btn-outline-primary" onclick="loadPreset('午餐套餐')">午餐</button>
+            <button class="btn btn-outline-primary" onclick="loadPreset('晚餐套餐')">晚餐</button>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button class="btn btn-outline-info" onclick="saveAsTemplate()">保存为模板</button>
+        <button class="btn btn-outline-info" onclick="loadTemplate()">加载模板</button>
+    </div>
+
+    <button class="btn btn-primary" onclick="scanBarcode()">
+        <i class="fas fa-barcode"></i> 扫码添加
+    </button>
+
+    <button class="btn btn-info" onclick="duplicateOrder()">
+        复制上次订单
+    </button>
+</div>
+
+<div class="modal fade" id="addCustomItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">手动添加商品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="customItemForm">
+                    <div class="mb-3">
+                        <label class="form-label">商品名称</label>
+                        <input type="text" class="form-control" id="customItemName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">单位</label>
+                        <input type="text" class="form-control" id="customItemUnit" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">单价</label>
+                        <input type="number" class="form-control" id="customItemPrice" step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">数量</label>
+                        <input type="number" class="form-control" id="customItemQuantity" step="0.1" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="addCustomItem()">添加</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
+// 语音识别功能
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'zh-CN';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    const startVoiceBtn = document.getElementById('startVoice');
+    const voiceStatus = document.getElementById('voiceStatus');
+
+    startVoiceBtn.addEventListener('click', () => {
+        recognition.start();
+        voiceStatus.textContent = '正在识别...请说出商品名称和数量';
+        startVoiceBtn.disabled = true;
+    });
+
+    recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        voiceStatus.textContent = `识别结果: ${text}`;
+        
+        // 解析语音内容（例如："大豆油 2箱"）
+        const match = text.match(/(.+?)\s*(\d+)(?:箱|个|包|件)?/);
+        if (match) {
+            const [_, itemName, quantity] = match;
+            
+            // 查找最匹配的商品
+            const select = document.getElementById('newItem');
+            const options = Array.from(select.options);
+            const bestMatch = options.find(opt => 
+                opt.text.includes(itemName) || itemName.includes(opt.text)
+            );
+            
+            if (bestMatch) {
+                // 设置商品和数量
+                jQuery('#newItem').val(bestMatch.value).trigger('change');
+                document.getElementById('newQuantity').value = quantity;
+                // 自动添加到订单
+                setTimeout(addItem, 500);
+            }
+        }
+    };
+
+    recognition.onend = () => {
+        startVoiceBtn.disabled = false;
+        voiceStatus.textContent = '';
+    };
+
+    recognition.onerror = (event) => {
+        voiceStatus.textContent = '语音识别错误，请重试';
+        startVoiceBtn.disabled = false;
+    };
+} else {
+    document.getElementById('startVoice').style.display = 'none';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // 确保 jQuery 已加载
     if (typeof jQuery === 'undefined') {
@@ -117,7 +283,8 @@ document.addEventListener('DOMContentLoaded', function() {
         allowClear: true,
         language: 'zh-CN',
         dropdownParent: jQuery('#orderForm'),
-        minimumInputLength: 1,
+        minimumInputLength: 0,
+        closeOnSelect: false,
         matcher: function(params, data) {
             if (!params.term) {
                 return data;
@@ -190,5 +357,144 @@ function loadLastOrder() {
         addItem();
     });
 }
+
+// 使用原生语音输入
+function showVoiceInput() {
+    // 获取输入框
+    const quantityInput = document.getElementById('newQuantity');
+    
+    // 在iOS上直接触键盘的语音输入
+    quantityInput.focus();
+    // 显示提示
+    alert('请点击键盘上的麦克风图标进行语音输入');
+}
+
+// 添加滑动删除功能
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+});
+
+document.addEventListener('touchend', e => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe(e.target);
+});
+
+function handleSwipe(target) {
+    const swipeThreshold = 100;
+    const swipeLength = touchEndX - touchStartX;
+    
+    if (Math.abs(swipeLength) > swipeThreshold) {
+        const row = target.closest('tr');
+        if (row && !row.id.includes('newItemRow')) {
+            if (swipeLength < 0) {  // 左滑
+                row.remove();  // 删除该行
+            }
+        }
+    }
+}
+
+function adjustQuantity(delta) {
+    const input = document.getElementById('newQuantity');
+    const currentValue = parseFloat(input.value) || 0;
+    input.value = Math.max(0, currentValue + delta);
+}
+
+// 添加自定义商品
+function addCustomItem() {
+    const name = document.getElementById('customItemName').value;
+    const unit = document.getElementById('customItemUnit').value;
+    const price = document.getElementById('customItemPrice').value;
+    const quantity = document.getElementById('customItemQuantity').value;
+    
+    if (name && unit && price && quantity) {
+        const tbody = document.getElementById('orderTable').getElementsByTagName('tbody')[0];
+        const newRow = tbody.insertRow(tbody.rows.length - 1);
+        
+        newRow.innerHTML = `
+            <td>${name}
+                <input type="hidden" name="quantity_${name}" value="${quantity}">
+                <input type="hidden" name="custom_price_${name}" value="${price}">
+                <input type="hidden" name="custom_unit_${name}" value="${unit}">
+            </td>
+            <td>${unit}</td>
+            <td>${price}</td>
+            <td>${quantity}</td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger" onclick="this.parentNode.parentNode.remove()">
+                    删除
+                </button>
+            </td>
+        `;
+        
+        // 清空表单并关闭模态框
+        document.getElementById('customItemForm').reset();
+        bootstrap.Modal.getInstance(document.getElementById('addCustomItemModal')).hide();
+    }
+}
 </script>
+
+<style>
+    /* iPad 特定优化 */
+    @supports (-webkit-touch-callout: none) {
+        /* 增大按钮点击区域 */
+        .btn {
+            min-height: 44px;  /* Apple推荐的最小触摸区域 */
+            padding: 10px 20px;
+        }
+        
+        /* 优化输入框 */
+        input[type="number"] {
+            font-size: 16px;  /* 防止iOS自动缩放 */
+            padding: 10px;
+            height: 44px;
+        }
+        
+        /* Select2适配 */
+        .select2-container .select2-selection--single {
+            height: 44px;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 44px;
+        }
+        
+        /* 表格适配 */
+        .table td {
+            padding: 12px;
+        }
+    }
+
+    /* 触摸屏优化 */
+    @media (pointer: coarse) {
+        /* 增大按钮点击区域 */
+        .btn {
+            min-height: 40px;
+            padding: 8px 16px;
+            margin: 4px;
+        }
+        
+        /* 优化输入框 */
+        .form-control {
+            min-height: 40px;
+            padding: 8px;
+        }
+        
+        /* 增大表格单元格 */
+        .table td, .table th {
+            padding: 12px 8px;
+        }
+        
+        /* Select2下拉框适配 */
+        .select2-container .select2-selection--single {
+            height: 40px;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 40px;
+        }
+    }
+</style>
 {% endblock %} 
